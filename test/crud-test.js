@@ -582,15 +582,15 @@ describe("CRUD operations", function() {
 
                 buster.expect(sheet1.find("./sheetData/row/c[@r='D2']/f").text).toEqual("Table3[Qty]*Table3[UnitCost]");
                 buster.expect(sheet1.find("./sheetData/row/c[@r='D2']/v")).toBeNull();
-                
+
                 // This part is not working
                 // buster.expect(sheet1.find("./sheetData/row/c[@r='D3']/f").text).toEqual("Table3[Qty]*Table3[UnitCost]");
-                
+
                 // fs.writeFileSync('test/output/test6.xlsx', newData, 'binary');
                 done();
-            });        
+            });
         });
-        
+
         it("File without dimensions works", function(done) {
             fs.readFile(path.join(__dirname, 'templates', 'gdocs.xlsx'), function(err, data) {
                 buster.expect(err).toBeNull();
@@ -609,9 +609,9 @@ describe("CRUD operations", function() {
 
                 // fs.writeFileSync('test/output/test7.xlsx', newData, 'binary');
                 done();
-            });        
+            });
         });
-        
+
         it("Array indexing", function(done) {
             fs.readFile(path.join(__dirname, 'templates', 'test-array.xlsx'), function(err, data) {
                 buster.expect(err).toBeNull();
@@ -632,12 +632,12 @@ describe("CRUD operations", function() {
                 buster.expect(getSharedString(sharedStrings, sheet1, "A2")).toEqual("First row");
                 buster.expect(sheet1.find("./sheetData/row/c[@r='B2']/v")).not.toBeNull();
                 buster.expect(getSharedString(sharedStrings, sheet1, "B2")).toEqual("B");
-                
+
                 // fs.writeFileSync('test/output/test8.xlsx', newData, 'binary');
                 done();
-            });        
+            });
         });
-        
+
         it("Arrays with single element", function(done) {
             fs.readFile(path.join(__dirname, 'templates', 'test-nested-arrays.xlsx'), function(err, data) {
                 buster.expect(err).toBeNull();
@@ -656,10 +656,61 @@ describe("CRUD operations", function() {
                 buster.expect(a1.text).toEqual("123");
                 buster.expect(firstElement).not.toBeNull();
                 buster.expect(firstElement.length).toEqual(1);
-                
+
                 fs.writeFileSync('test/output/test-nested-arrays.xlsx', newData, 'binary');
                 done();
-            });        
+            });
+        });
+
+        it("table with array, and not creating duplicate elements", function(done) {
+            fs.readFile(path.join(__dirname, 'templates', 'test-nested-arrays-table.xlsx'), function(err, data) {
+                buster.expect(err).toBeNull();
+
+                var t = new XlsxTemplate(data);
+                t.substitute(1, {
+                    titles: ['title1', 'title2'],
+                    planData: [
+                        { name: 'A', role: ['role1'] },
+                        { name: 'B', role: ['role2'] }
+                    ]
+                });
+
+                var newData = t.generate();
+                var sharedStrings = etree.parse(t.archive.file("xl/sharedStrings.xml").asText()).getroot(),
+                    sheet1        = etree.parse(t.archive.file("xl/worksheets/sheet1.xml").asText()).getroot();
+                buster.expect(sheet1).toBeDefined();
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='A1']/v").text, 10)
+                    ].find("t").text
+                ).toEqual("title");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='A2']/v").text, 10)
+                    ].find("t").text
+                ).toEqual("A");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='A3']/v").text, 10)
+                    ].find("t").text
+                ).toEqual("B");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='B2']/v").text, 10)
+                    ].find("t").text
+                ).toEqual("role1");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='B3']/v").text, 10)
+                    ].find("t").text
+                ).toEqual("role2");
+                buster.expect(
+                  sheet1.findall("./sheetData/row/c[@r='B2']").length
+                ).toEqual(1);
+
+                fs.writeFileSync('test/output/test-nested-arrays-table.xlsx', newData, 'binary');
+                done();
+            });
         });
     });
 
