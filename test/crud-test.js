@@ -674,7 +674,7 @@ describe("CRUD operations", function() {
                         { name: 'B', role: ['role2'] }
                     ]
                 });
-
+                debugger;
                 var newData = t.generate();
                 var sharedStrings = etree.parse(t.archive.file("xl/sharedStrings.xml").asText()).getroot(),
                     sheet1        = etree.parse(t.archive.file("xl/worksheets/sheet1.xml").asText()).getroot();
@@ -704,6 +704,7 @@ describe("CRUD operations", function() {
                         parseInt(sheet1.find("./sheetData/row/c[@r='B3']/v").text, 10)
                     ].find("t").text
                 ).toEqual("role2");
+
                 buster.expect(
                   sheet1.findall("./sheetData/row/c[@r='B2']").length
                 ).toEqual(1);
