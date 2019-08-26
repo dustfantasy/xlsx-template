@@ -285,6 +285,138 @@ describe("CRUD operations", function() {
             });
 
         });
+		
+		it("can substitute values when single item array contains an object and generate a file", function(done) {
+
+            fs.readFile(path.join(__dirname, 'templates', 't3.xlsx'), function(err, data) {
+                buster.expect(err).toBeNull();
+
+                var t = new XlsxTemplate(data);
+
+                t.substitute(1, {
+                    demo: { extractDate: new Date("2013-01-02") },
+                    revision: 10,
+                    planData: [
+                        {
+                            name: "John Smith",
+                            role: { name: "Developer" }
+                        }
+                    ]
+                });
+
+                var newData = t.generate();
+
+                var sharedStrings = etree.parse(t.archive.file("xl/sharedStrings.xml").asText()).getroot(),
+                    sheet1        = etree.parse(t.archive.file("xl/worksheets/sheet1.xml").asText()).getroot();
+
+                // Dimensions should be updated
+                buster.expect(sheet1.find("./dimension").attrib.ref).toEqual("B2:C7");
+
+                // extract date placeholder - interpolated into string referenced at B4
+                buster.expect(sheet1.find("./sheetData/row/c[@r='B4']").attrib.t).toEqual("s");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='B4']/v").text, 10)
+                    ].find("t").text
+                ).toEqual("Extracted on 41276");
+
+                // revision placeholder - cell C4 changed from string to number
+                buster.expect(sheet1.find("./sheetData/row/c[@r='C4']/v").text).toEqual("10");
+
+                // planData placeholder - added rows and cells
+                buster.expect(sheet1.find("./sheetData/row/c[@r='B7']").attrib.t).toEqual("s");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='B7']/v").text, 10)
+                    ].find("t").text
+                ).toEqual("John Smith");
+               
+                buster.expect(sheet1.find("./sheetData/row/c[@r='C7']").attrib.t).toEqual("s");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='C7']/v").text, 10)
+                    ].find("t").text
+                ).toEqual("Developer");
+               
+                // XXX: For debugging only
+                fs.writeFileSync('test/output/test6.xlsx', newData, 'binary');
+
+                done();
+            });
+
+        });
+		
+		it("can substitute values when single item array contains an object with sub array containing primatives and generate a file", function(done) {
+
+            fs.readFile(path.join(__dirname, 'templates', 't2.xlsx'), function(err, data) {
+                buster.expect(err).toBeNull();
+
+                var t = new XlsxTemplate(data);
+
+                t.substitute(1, {
+                    demo: { extractDate: new Date("2013-01-02") },
+                    revision: 10,
+                    dates: [new Date("2013-01-01"), new Date("2013-01-02"), new Date("2013-01-03")],
+                    planData: [
+                        {
+                            name: "John Smith",
+                            role: { name: "Developer" },
+                            days: [8, 8, 4]
+                        }
+                    ]
+                });
+
+                var newData = t.generate();
+				
+                var sharedStrings = etree.parse(t.archive.file("xl/sharedStrings.xml").asText()).getroot(),
+                    sheet1        = etree.parse(t.archive.file("xl/worksheets/sheet1.xml").asText()).getroot();
+
+                // Dimensions should be updated
+                buster.expect(sheet1.find("./dimension").attrib.ref).toEqual("B2:F7");
+
+                // extract date placeholder - interpolated into string referenced at B4
+                buster.expect(sheet1.find("./sheetData/row/c[@r='B4']").attrib.t).toEqual("s");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='B4']/v").text, 10)
+                    ].find("t").text
+                ).toEqual("Extracted on 41276");
+
+                // revision placeholder - cell C4 changed from string to number
+                buster.expect(sheet1.find("./sheetData/row/c[@r='C4']/v").text).toEqual("10");
+
+                // dates placeholder - added cells
+                buster.expect(sheet1.find("./sheetData/row/c[@r='D6']/v").text).toEqual("41275");
+                buster.expect(sheet1.find("./sheetData/row/c[@r='E6']/v").text).toEqual("41276");
+                buster.expect(sheet1.find("./sheetData/row/c[@r='F6']/v").text).toEqual("41277");
+
+                // planData placeholder - added rows and cells
+                buster.expect(sheet1.find("./sheetData/row/c[@r='B7']").attrib.t).toEqual("s");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='B7']/v").text, 10)
+                    ].find("t").text
+                ).toEqual("John Smith");
+
+                buster.expect(sheet1.find("./sheetData/row/c[@r='C7']").attrib.t).toEqual("s");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='C7']/v").text, 10)
+                    ].find("t").text
+                ).toEqual("Developer");
+
+
+                buster.expect(sheet1.find("./sheetData/row/c[@r='D7']/v").text).toEqual("8");
+                buster.expect(sheet1.find("./sheetData/row/c[@r='E7']/v").text).toEqual("8");
+                buster.expect(sheet1.find("./sheetData/row/c[@r='F7']/v").text).toEqual("4");
+
+                // XXX: For debugging only
+                fs.writeFileSync('test/output/test7.xlsx', newData, 'binary');
+
+                done();
+            });
+
+        });
 
         it("moves columns left or right when filling lists", function(done) {
 
@@ -641,9 +773,9 @@ describe("CRUD operations", function() {
         it("Arrays with single element", function(done) {
             fs.readFile(path.join(__dirname, 'templates', 'test-nested-arrays.xlsx'), function(err, data) {
                 buster.expect(err).toBeNull();
-
+				
                 var t = new XlsxTemplate(data);
-                var data = { "sales": [ { "payments": [123], } ] };
+                var data = { "sales": [ { "payments": [123] } ] };
                 t.substitute(1, data);
 
                 var newData = t.generate();
@@ -713,6 +845,88 @@ describe("CRUD operations", function() {
                 done();
             });
         });
-    });
 
+        it("will correctly fill cells on all rows where arrays are used to dynamically render multiple cells", function (done) {
+            fs.readFile(path.join(__dirname, 'templates', 't2.xlsx'), function (err, data) {
+                buster.expect(err).toBeNull();
+
+                var t = new XlsxTemplate(data);
+
+                t.substitute(1, {
+                    demo: { extractDate: new Date("2013-01-02") },
+                    revision: 10,
+                    dates: [new Date("2013-01-01"), new Date("2013-01-02"), new Date("2013-01-03")],
+                    planData: [{
+                            name: "John Smith",
+                            role: { name: "Developer" },
+                            days: [1, 2, 3]
+                        },
+                        {
+                            name: "James Smith",
+                            role: { name: "Analyst" },
+                            days: [1, 2, 3, 4, 5]
+                        },
+                        {
+                            name: "Jim Smith",
+                            role: { name: "Manager" },
+                            days: [1, 2, 3, 4, 5, 6, 7]
+                        }
+                    ]
+                });
+
+                var newData = t.generate();
+
+                // var sharedStrings = etree.parse(t.archive.file("xl/sharedStrings.xml").asText()).getroot(),
+                var sheet1 = etree.parse(t.archive.file("xl/worksheets/sheet1.xml").asText()).getroot();
+
+                // Dimensions should be updated
+                buster.expect(sheet1.find("./dimension").attrib.ref).toEqual("B2:F9");
+
+                // Check length of all rows
+                buster.expect(sheet1.find("./sheetData/row[@r='7']")._children.length).toEqual(2 + 3);
+                buster.expect(sheet1.find("./sheetData/row[@r='8']")._children.length).toEqual(2 + 5);
+                buster.expect(sheet1.find("./sheetData/row[@r='9']")._children.length).toEqual(2 + 7);
+
+                fs.writeFileSync('test/output/test8.xlsx', newData, 'binary');
+
+                done();
+            });
+        });
+    });
+    
+    describe("Multiple sheets", function() {
+        it("Each sheet should take each name", function (done) {
+            fs.readFile(path.join(__dirname, 'templates', 'multple-sheets-arrays.xlsx'), function(err, data) {
+                buster.expect(err).toBeNull();
+
+                // Create a template
+                var t = new XlsxTemplate(data);
+                for (let sheetNumber = 1; sheetNumber <= 2; sheetNumber++) {
+                    // Set up some placeholder values matching the placeholders in the template
+                    var values = {
+                        page: 'page: ' + sheetNumber,
+                        sheetNumber
+                    };
+            
+                    // Perform substitution
+                    t.substitute(sheetNumber, values);
+                }
+            
+                // Get binary data
+                var newData = t.generate();
+                var sharedStrings = etree.parse(t.archive.file("xl/sharedStrings.xml").asText()).getroot();
+                var sheet1        = etree.parse(t.archive.file("xl/worksheets/sheet1.xml").asText()).getroot();
+                var sheet2        = etree.parse(t.archive.file("xl/worksheets/sheet2.xml").asText()).getroot();
+                buster.expect(sheet1).toBeDefined();
+                buster.expect(sheet2).toBeDefined();
+                buster.expect(getSharedString(sharedStrings, sheet1, "A1")).toEqual("page: 1");
+                buster.expect(getSharedString(sharedStrings, sheet2, "A1")).toEqual("page: 2");
+                buster.expect(getSharedString(sharedStrings, sheet1, "A2")).toEqual("Page 1");
+                buster.expect(getSharedString(sharedStrings, sheet2, "A2")).toEqual("Page 2");
+                
+                fs.writeFileSync('test/output/multple-sheets-arrays.xlsx', newData, 'binary');
+                done();
+            });
+        });
+    });
 });
