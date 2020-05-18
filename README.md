@@ -82,6 +82,26 @@ those objects have keys `name` and `age`, you may end up with something like:
 
 If a particular value is an array, then it will be repeated across columns as
 above.
+## gap
+gap代表table橫跨幾行。
+
+    | Name                 | Age                 |
+    | ${table:people.name} | ${table:people.age} |
+    | ${table:people.address} | |
+
+```
+var people = [{
+  name: 'test',age: 12,address: 'addr',gap:2
+}, {
+  name: 'test2',age: 22,address: 'addr2'
+}]
+```
+    | Name                 | Age                 |
+    | test | 12 |
+    | addr | |
+    | test2 | 22 |
+    | addr2 | |
+
 
 ## Generating reports
 
